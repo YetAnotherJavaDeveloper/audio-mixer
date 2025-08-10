@@ -1,5 +1,5 @@
 use std::fs::File;
-use rodio::{ChannelCount, Decoder, Sample, Sink};
+use rodio::{ChannelCount, Decoder, OutputStream, Sample, Sink};
 use rodio::buffer::SamplesBuffer;
 use crate::core::MusicSamples;
 
@@ -29,38 +29,50 @@ impl MediaFilePlayer {
 }
 
 pub struct MusicSamplesPlayer {
-    music_samples: MusicSamples
+    music_samples: MusicSamples,
+    sink: Sink,
+    output_stream: OutputStream,
+    first_play: bool,
 }
 
 impl MusicSamplesPlayer {
     pub fn new(music_samples: MusicSamples) -> MusicSamplesPlayer {
+        let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
+            .expect("open default audio stream");
         MusicSamplesPlayer {
-            music_samples: music_samples
+            music_samples,
+            sink: Sink::connect_new(&stream_handle.mixer()),
+            output_stream: stream_handle,
+            first_play: true,
         }
     }
 
-    pub fn play(&self) {
-        let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
-            .expect("open default audio stream");
+    pub fn play(&mut self) {
 
-        let sink = Sink::connect_new(&stream_handle.mixer());
+        if(self.first_play) {
 
-        let mut buffer_data : Vec<Sample> = Vec::new();
+            let mut buffer_data : Vec<Sample> = Vec::new();
 
-        for pos in 0..self.music_samples.all_samples[0].len() {
-            for ch in 0..self.music_samples.all_samples.len() {
-                buffer_data.push(self.music_samples.all_samples[ch][pos]);
+            for pos in 0..self.music_samples.all_samples[0].len() {
+                for ch in 0..self.music_samples.all_samples.len() {
+                    buffer_data.push(self.music_samples.all_samples[ch][pos]);
+                }
             }
+
+            let samples_buffer = SamplesBuffer::new(
+                ChannelCount::from(self.music_samples.channels as u16),
+                self.music_samples.sample_rate,
+                buffer_data
+            );
+
+            self.sink.append(samples_buffer);
+            self.first_play = false;
+        } else {
+            self.sink.play();
         }
+    }
 
-        let samples_buffer = SamplesBuffer::new(
-            ChannelCount::from(self.music_samples.channels as u16),
-            self.music_samples.sample_rate,
-            buffer_data
-        );
-
-        sink.append(samples_buffer);
-
-        sink.sleep_until_end();
+    pub fn pause(&mut self) {
+        self.sink.pause();
     }
 }
