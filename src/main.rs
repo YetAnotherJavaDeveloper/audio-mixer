@@ -4,7 +4,7 @@ mod media;
 
 use crate::core::{find_minmax, transform_abstract, MusicSamples};
 use crate::file::{read_music_samples_from_file, save_music_samples};
-use crate::media::MediaFilePlayer;
+use crate::media::{MediaFilePlayer, MusicSamplesPlayer};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -18,7 +18,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     save_music_samples(&processed, "output.wav")?;
 
-    MediaFilePlayer::new(String::from("output.wav")).play();
+    MusicSamplesPlayer::new(processed).play();
+
+    //MediaFilePlayer::new(String::from("output.wav")).play();
 
     Ok(())
 }
