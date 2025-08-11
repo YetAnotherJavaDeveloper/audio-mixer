@@ -30,7 +30,7 @@ impl MediaFilePlayer {
 
 pub struct MusicSamplesPlayer {
     music_samples: MusicSamples,
-    sink: Sink,
+    pub sink: Sink,
     output_stream: OutputStream,
     first_play: bool,
     pub current_position: usize,

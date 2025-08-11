@@ -8,7 +8,7 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::default::{get_codecs, get_probe};
 use super::core::MusicSamples;
 
-pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, Box<dyn std::error::Error + Send + Sync + 'static>> {
+pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, Box<dyn std::error::Error>> {
 
     // --- 1. Open and decode audio with Symphonia ---
     let file = File::open(file_path)?;
@@ -46,16 +46,6 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, B
             _ => return Err("Unsupported sample format".into()),
         }
     }
-
-    let channels_data_count: usize = channels_data.iter().map(|v| v.len()).sum();
-
-
-    println!(
-        "Decoded samples {} ({} channels at {} Hz)",
-        channels_data_count,
-        channels,
-        sample_rate
-    );
 
     Ok(MusicSamples {
         all_samples: channels_data,

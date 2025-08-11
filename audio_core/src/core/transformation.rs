@@ -68,27 +68,6 @@ fn transform_flat(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
 }
 
 
-
-pub fn find_minmax(samples: &MusicSamples) {
-    let mut min = 0.0;
-    let mut max = 0.0;
-
-    for x in &samples.all_samples {
-        for y in x {
-            if y < &min {
-                min = *y;
-            }
-            if y > &max {
-                max = *y;
-            }
-        }
-    }
-
-    println!("min: {}", min);
-    println!("max: {}", max);
-}
-
-
 enum MusicMode {
     HALF,
     NORMAL,
