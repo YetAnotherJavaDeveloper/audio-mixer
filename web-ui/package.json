@@ -60,5 +60,8 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
+  },
+  "volta": {
+    "node": "24.5.0"
   }
 }

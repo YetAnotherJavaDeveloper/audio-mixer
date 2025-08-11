@@ -23,4 +23,7 @@ target
 # Ignore the entire .vscode folder
 .vscode/
 
+# Ignore eslint cache files
+.eslintcache
+
 *.wav
