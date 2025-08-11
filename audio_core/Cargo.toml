@@ -1,0 +1,14 @@
+[package]
+name = "audio_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+symphonia = "0.5.4"
+rodio = "0.21.1"
+hound = "3.5"
+iced = { version = "0.13", features = ["wgpu", "canvas", "tokio"] }
+rfd = "0.15.4"
+regex = "1.11.1"
+rand = "0.8.5"
+serde = "1.0.219"

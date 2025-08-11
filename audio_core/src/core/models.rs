@@ -1,8 +1,10 @@
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MusicSamples {
     pub all_samples: Vec<Vec<f32>>,
     pub sample_rate: u32,
-    pub channels: usize
+    pub channels: usize,
 }
 
 pub enum Transformation {
@@ -12,5 +14,5 @@ pub enum Transformation {
     DoubleSpeed,
     Echo,
     DoubleLeft,
-    DoNothing
+    DoNothing,
 }
