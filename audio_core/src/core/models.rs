@@ -62,6 +62,10 @@ impl MultiChannelSample {
             samples: vec![Sample::empty(); capacity],
         }
     }
+    
+    pub fn mono(sample: Sample) -> MultiChannelSample {
+        MultiChannelSample { samples: vec![sample] }
+    }
 
     pub fn channels(&self) -> usize {
         self.samples.len()
