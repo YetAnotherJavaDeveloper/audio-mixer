@@ -26,4 +26,8 @@ target
 # Ignore eslint cache files
 .eslintcache
 
+# Ignore lock files
+Cargo.lock
+
+
 *.wav
