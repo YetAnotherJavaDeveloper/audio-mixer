@@ -8,7 +8,7 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::default::{get_codecs, get_probe};
 use super::core::MusicSamples;
 
-pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, Box<dyn std::error::Error>> {
+pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, Box<dyn std::error::Error + Send + Sync + 'static>> {
 
     // --- 1. Open and decode audio with Symphonia ---
     let file = File::open(file_path)?;

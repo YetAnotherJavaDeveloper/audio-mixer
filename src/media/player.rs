@@ -33,6 +33,7 @@ pub struct MusicSamplesPlayer {
     sink: Sink,
     output_stream: OutputStream,
     first_play: bool,
+    pub current_position: usize,
 }
 
 impl MusicSamplesPlayer {
@@ -44,6 +45,7 @@ impl MusicSamplesPlayer {
             sink: Sink::connect_new(&stream_handle.mixer()),
             output_stream: stream_handle,
             first_play: true,
+            current_position: 0,
         }
     }
 
@@ -54,6 +56,7 @@ impl MusicSamplesPlayer {
             let mut buffer_data : Vec<Sample> = Vec::new();
 
             for pos in 0..self.music_samples.all_samples[0].len() {
+                self.current_position = pos;
                 for ch in 0..self.music_samples.all_samples.len() {
                     buffer_data.push(self.music_samples.all_samples[ch][pos]);
                 }

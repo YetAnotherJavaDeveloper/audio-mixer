@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct MusicSamples {
     pub all_samples: Vec<Vec<f32>>,
     pub sample_rate: u32,
