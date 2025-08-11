@@ -6,9 +6,9 @@ use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::default::{get_codecs, get_probe};
-use super::core::MusicSamples;
+use super::core::{MusicSample, SampleRate, Sample, MultiChannelSample};
 
-pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, Box<dyn std::error::Error>> {
+pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Box<dyn std::error::Error>> {
 
     // --- 1. Open and decode audio with Symphonia ---
     let file = File::open(file_path)?;
@@ -25,7 +25,7 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, B
 
     let mut decoder = get_codecs().make(&track.codec_params, &DecoderOptions::default())?;
 
-    let mut channels_data: Vec<Vec<f32>> = vec![Vec::new(); track.codec_params.channels.unwrap().count()];
+    let mut channels_data: MultiChannelSample = MultiChannelSample::with_capacity(track.codec_params.channels.unwrap().count());
     let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
     let channels = track.codec_params.channels.unwrap().count();
 
@@ -35,37 +35,33 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSamples, B
         match decoded {
             AudioBufferRef::F32(buf) => {
                 for ch in 0..buf.spec().channels.count() {
-                    channels_data[ch].extend_from_slice(buf.chan(ch));
+                    channels_data.sample_mut(ch).values_mut().extend_from_slice(buf.chan(ch));
                 }
             }
             AudioBufferRef::S16(buf) => {
                 for ch in 0..buf.spec().channels.count() {
-                    channels_data[ch].extend(buf.chan(ch).iter().map(|&s| s as f32 / i16::MAX as f32));
+                    channels_data.sample_mut(ch).values_mut().extend(buf.chan(ch).iter().map(|&s| s as f32 / i16::MAX as f32));
                 }
             }
             _ => return Err("Unsupported sample format".into()),
         }
     }
 
-    Ok(MusicSamples {
-        all_samples: channels_data,
-        sample_rate,
-        channels
-    })
+    Ok(MusicSample::new(channels_data, SampleRate::new(sample_rate)))
 }
 
-pub fn save_music_samples(music_samples: &MusicSamples, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_music_samples(music_samples: &MusicSample, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
-    let mut interleaved = Vec::with_capacity(music_samples.all_samples[0].len() * music_samples.all_samples.len());
-    for i in 0..music_samples.all_samples[0].len() {
-        for ch in 0..music_samples.all_samples.len() {
-            interleaved.push(music_samples.all_samples[ch][i]);
+    let mut interleaved = Vec::with_capacity(music_samples.first_channel_sample().len() * music_samples.multi_channel_sample().channels());
+    for i in 0..music_samples.first_channel_sample().len() {
+        for ch in 0..music_samples.multi_channel_sample().channels() {
+            interleaved.push(music_samples.multi_channel_sample().sample(ch).value(i));
         }
     }
 
     let spec = hound::WavSpec {
-        channels: music_samples.all_samples.len() as u16,
-        sample_rate: music_samples.sample_rate,
+        channels: music_samples.multi_channel_sample().channels() as u16,
+        sample_rate: music_samples.sample_rate().value(),
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };

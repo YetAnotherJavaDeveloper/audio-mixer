@@ -1,10 +1,10 @@
-use crate::core::MusicSamples;
+use crate::core::MusicSample;
 
-pub fn extract_sample_info(samples: &MusicSamples) {
-    let num_samples = samples.all_samples.len();
-    let sample_length = samples.all_samples[0].len();
-    let sample_rate = samples.sample_rate;
-    let channels = samples.channels;
+pub fn extract_sample_info(sample: &MusicSample) {
+    let num_samples = sample.multi_channel_sample().channels();
+    let sample_length = sample.first_channel_sample().len();
+    let sample_rate = sample.sample_rate().value();
+    let channels = sample.channels();
 
     println!("Sample info : ");
     println!("Number of samples: {}", num_samples);
@@ -15,16 +15,16 @@ pub fn extract_sample_info(samples: &MusicSamples) {
     let duration = sample_length as f64 / sample_rate as f64;
     println!("Duration: {:.2} seconds", duration);
 
-    find_minmax(&samples);
+    find_minmax(&sample);
     println!();
 }
 
-fn find_minmax(samples: &MusicSamples) {
+fn find_minmax(sample: &MusicSample) {
     let mut min = 0.0;
     let mut max = 0.0;
 
-    for x in &samples.all_samples {
-        for y in x {
+    for x in sample.multi_channel_sample().samples() {
+        for y in x.values() {
             if y < &min {
                 min = *y;
             }

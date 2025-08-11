@@ -1,7 +1,7 @@
 use std::fs::File;
 use rodio::{ChannelCount, Decoder, OutputStream, Sample, Sink};
 use rodio::buffer::SamplesBuffer;
-use crate::core::MusicSamples;
+use crate::core::MusicSample;
 
 pub struct MediaFilePlayer {
     file_path: String,
@@ -29,7 +29,7 @@ impl MediaFilePlayer {
 }
 
 pub struct MusicSamplesPlayer {
-    music_samples: MusicSamples,
+    music_sample: MusicSample,
     pub sink: Sink,
     output_stream: OutputStream,
     first_play: bool,
@@ -37,11 +37,11 @@ pub struct MusicSamplesPlayer {
 }
 
 impl MusicSamplesPlayer {
-    pub fn new(music_samples: MusicSamples) -> MusicSamplesPlayer {
+    pub fn new(music_sample: MusicSample) -> MusicSamplesPlayer {
         let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
             .expect("open default audio stream");
         MusicSamplesPlayer {
-            music_samples,
+            music_sample,
             sink: Sink::connect_new(&stream_handle.mixer()),
             output_stream: stream_handle,
             first_play: true,
@@ -55,16 +55,16 @@ impl MusicSamplesPlayer {
 
             let mut buffer_data : Vec<Sample> = Vec::new();
 
-            for pos in 0..self.music_samples.all_samples[0].len() {
+            for pos in 0..self.music_sample.first_channel_sample().len() {
                 self.current_position = pos;
-                for ch in 0..self.music_samples.all_samples.len() {
-                    buffer_data.push(self.music_samples.all_samples[ch][pos]);
+                for ch in 0..self.music_sample.multi_channel_sample().channels() {
+                    buffer_data.push(self.music_sample.multi_channel_sample().sample(ch).value(pos));
                 }
             }
 
             let samples_buffer = SamplesBuffer::new(
-                ChannelCount::from(self.music_samples.channels as u16),
-                self.music_samples.sample_rate,
+                ChannelCount::from(self.music_sample.channels() as u16),
+                self.music_sample.sample_rate().value(),
                 buffer_data
             );
 

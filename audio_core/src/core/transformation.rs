@@ -1,67 +1,62 @@
-use crate::core::models::Transformation;
-use crate::core::MusicSamples;
+use crate::core::models::{Sample, Transformation};
+use crate::core::{MultiChannelSample, MusicSample};
 
-pub fn transform_abstract(samples: &MusicSamples) -> MusicSamples {
-    MusicSamples{
-        all_samples: transform_generic(&samples.all_samples, Transformation::Reverse),
-        sample_rate: samples.sample_rate,
-        channels: samples.channels,
-    }
+pub fn transform_abstract(sample: &MusicSample) -> MusicSample {
+    sample.copy(transform_generic(sample.multi_channel_sample(), Transformation::Reverse))
 }
 
-fn transform_generic(samples: &Vec<Vec<f32>>, transformation: Transformation) -> Vec<Vec<f32>> {
+fn transform_generic(multi_channel_sample: &MultiChannelSample, transformation: Transformation) -> MultiChannelSample {
 
     match transformation {
-        Transformation::Reverse => {transform_reverse(&samples)}
-        Transformation::Flat => {transform_flat(&samples)}
-        Transformation::SpeedChelou => {transform_speed_chelou(&samples)}
-        Transformation::DoubleSpeed => {transform_double_speed(&samples)}
-        Transformation::Echo => {transform_echo(&samples)}
-        Transformation::DoubleLeft => {transform_double_left(&samples)}
-        Transformation::DoNothing => {transform_do_nothing(&samples)}
+        Transformation::Reverse => {transform_reverse(&multi_channel_sample)}
+        Transformation::Flat => {transform_flat(&multi_channel_sample)}
+        Transformation::SpeedChelou => {transform_speed_chelou(&multi_channel_sample)}
+        Transformation::DoubleSpeed => {transform_double_speed(&multi_channel_sample)}
+        Transformation::Echo => {transform_echo(&multi_channel_sample)}
+        Transformation::DoubleLeft => {transform_double_left(&multi_channel_sample)}
     }
 }
 
-fn transform_reverse(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
-    let mut result: Vec<Vec<f32>> = Vec::new();
-    for lr in 0..2 {
-        let mut result_vec: Vec<f32>  = Vec::new();
+fn transform_reverse(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
+    for channel in 0..multi_channel_sample.channels() {
+        let mut result_sample  = Sample::empty();
 
-        let mut i = samples[lr].len();
+        let mut i = multi_channel_sample.sample(channel).len();
         while i > 0 {
-            result_vec.push(samples[lr][i -1]);
+            result_sample.push(multi_channel_sample.sample(channel).value(i - 1));
             i -= 1;
         }
 
 
-        result.push(result_vec);
+        result.push(result_sample);
     }
 
     result
 }
 
-fn transform_flat(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
-    let mut result: Vec<Vec<f32>> = Vec::new();
-    for lr in 0..2 {
-        let mut result_vec: Vec<f32>  = Vec::new();
+fn transform_flat(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
+    for channel in 0..multi_channel_sample.channels() {
+        let mut result_sample: Sample = Sample::empty();
 
         let mut i: usize = 0;
-        while i < samples[lr].len() {
+        while i < multi_channel_sample.sample(channel).len() {
 
             if i < 10 {
-                result_vec.push(samples[lr][i]);
+                result_sample.push(multi_channel_sample.sample(channel).value(i));
             } else {
-                let mut value = samples[lr][i];
+                let mut value = multi_channel_sample.sample(channel).value(i);
                 for j in 0 .. 10  {
-                    value += samples[lr][i - j];
+                    value += multi_channel_sample.sample(channel).value(i - j);
                 }
-                result_vec.push(value / 10.0);
+                result_sample.push(value / 10.0);
             }
             i += 1;
         }
 
 
-        result.push(result_vec);
+        result.push(result_sample);
     }
 
     result
@@ -74,32 +69,32 @@ enum MusicMode {
     DOUBLE
 }
 
-pub fn transform_speed_chelou(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
-    let mut result: Vec<Vec<f32>> = Vec::new();
+pub fn transform_speed_chelou(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
 
-    for lr in 0..2 {
-        let mut result_vec: Vec<f32>  = Vec::new();
+    for channel in 0..multi_channel_sample.channels() {
+        let mut result_sample: Sample = Sample::empty();
 
         let time_each_mode= 22000;
         let mut music_mode = MusicMode::NORMAL;
         let mut music_mode_incr = 0;
 
         let mut i = 0;
-        while i < samples[lr].len() {
+        while i < multi_channel_sample.sample(channel).len() {
             match music_mode {
                 MusicMode::HALF => {
                     if i % 2 == 0 {
-                        result_vec.push(samples[lr][i]);
+                        result_sample.push(multi_channel_sample.sample(channel).value(i));
                     } else {
-                        result_vec.push(samples[lr][i - 1]);
+                        result_sample.push(multi_channel_sample.sample(channel).value(i - 1));
                     }
                 }
                 MusicMode::NORMAL => {
-                    result_vec.push(samples[lr][i]);
+                    result_sample.push(multi_channel_sample.sample(channel).value(i));
                 }
                 MusicMode::DOUBLE => {
                     if i % 2 == 0 {
-                        result_vec.push(samples[lr][i]);
+                        result_sample.push(multi_channel_sample.sample(channel).value(i));
                     }
                 }
             }
@@ -122,41 +117,41 @@ pub fn transform_speed_chelou(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
             }
         }
 
-        result.push(result_vec);
+        result.push(result_sample);
     }
 
     result
 }
 
-pub fn transform_double_speed(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
-    let mut result: Vec<Vec<f32>> = Vec::new();
+pub fn transform_double_speed(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
 
-    for lr in 0..2 {
-        let mut result_vec: Vec<f32>  = Vec::new();
+    for channel in 0..multi_channel_sample.channels() {
+        let mut result_sample: Sample = Sample::empty();
 
         let mut i = 0;
-        while i < samples[lr].len() {
-            result_vec.push(samples[lr][i]);
+        while i < multi_channel_sample.sample(channel).len() {
+            result_sample.push(multi_channel_sample.sample(channel).value(i));
             i = i + 2;
         }
 
-        result.push(result_vec);
+        result.push(result_sample);
     }
 
     result
 }
 
-pub fn transform_echo(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+pub fn transform_echo(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
 
     let time_delay_sample = 22000;
 
-    let mut result: Vec<Vec<f32>> = Vec::new();
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
 
-    for lr in 0..2 {
+    for channel in 0..multi_channel_sample.channels() {
 
-        let mut delay_before: Vec<f32>  = Vec::new();
-        let mut delay_after: Vec<f32>  = Vec::new();
-        let mut result_vec: Vec<f32>  = Vec::new();
+        let mut delay_before: Sample = Sample::empty();
+        let mut delay_after: Sample = Sample::empty();
+        let mut result_vec: Sample = Sample::empty();
 
         let mut i = 0;
         while i < time_delay_sample {
@@ -164,7 +159,7 @@ pub fn transform_echo(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
             i = i + 1;
         }
 
-        for x in &samples[lr] {
+        for x in multi_channel_sample.sample(channel).values() {
             delay_before.push(*x);
             delay_after.push(*x);
         }
@@ -177,7 +172,7 @@ pub fn transform_echo(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
 
         let mut i = 0;
         while i < delay_before.len() {
-            result_vec.push(delay_after[i] + delay_before[i]);
+            result_vec.push(delay_after.value(i) + delay_before.value(i));
             i = i + 1;
         }
 
@@ -190,34 +185,26 @@ pub fn transform_echo(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
     result
 }
 
-pub fn transform_double_left(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+pub fn transform_double_left(multi_channel_sample: &MultiChannelSample) -> MultiChannelSample {
 
-    let mut left: Vec<f32>  = Vec::new();
-    let mut right: Vec<f32>  = Vec::new();
+    let mut left: Sample = Sample::empty();
+    let mut right: Sample = Sample::empty();
 
-    for x in &samples[0] {
+    for x in multi_channel_sample.first_channel().values() {
         left.push(*x);
         left.push(*x);
     }
 
-    for x in &samples[1] {
+    for x in multi_channel_sample.samples()[1].values() {
         right.push(*x);
     }
-    for x in &samples[1] {
+    for x in multi_channel_sample.samples()[1].values() {
         right.push(*x);
     }
 
-    let mut result: Vec<Vec<f32>> = Vec::new();
+    let mut result: MultiChannelSample = MultiChannelSample::empty();
     result.push(left);
     result.push(right);
 
     result
-}
-
-pub fn transform_do_nothing(samples: &Vec<Vec<f32>>) -> Vec<Vec<f32>> {
-    //simple do nothing transformation
-    samples
-        .iter()
-        .map(|v| v.iter().map(|&s| s * 1.0).collect::<Vec<_>>())//.clamp(-1.0, 1.0))
-        .collect()
 }
