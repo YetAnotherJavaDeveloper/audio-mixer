@@ -1,9 +1,8 @@
-import { ThemeProvider } from './components/theme-provider'
 import { useCallback, useEffect, useRef, useState } from 'react';
+import init from 'wasm-api';
 import PlayerComponent, { type PlayerRef } from './components/AudioPlayer';
 import AudioFileInput from './components/FileInput';
-import init from 'wasm-api';
-import { round } from 'radashi';
+import { ThemeProvider } from './components/theme-provider';
 
 
 const App = () => {

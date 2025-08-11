@@ -1,3 +1,5 @@
+import { round } from 'radashi';
+
 const extractAudioMetadata = async (file: File) => {
   const audio = new Audio(URL.createObjectURL(file));
   const promise = new Promise((resolve) => {
@@ -16,11 +18,12 @@ const extractAudioMetadata = async (file: File) => {
 };
 
 const formatMilliseconds = (ms: number) => {
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  const millis = ms % 1000;
-  return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`;
+  const hours = round(ms / (3600 * 1000));
+  const minutes = round((ms % (3600 * 1000)) / (60 * 1000));
+  const seconds = round((ms % (60 * 1000)) / 1000);
+  const millis = round(ms % 1000);
+  // format as HH:mm:ss.SSS
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
 };
 
 export const audioUtils = {

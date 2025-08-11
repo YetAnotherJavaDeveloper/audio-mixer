@@ -7,6 +7,8 @@ import { DateTime } from "luxon";
 import { isNumber, round } from "radashi";
 import { audioUtils } from "@/lib/audio/audio.utils";
 
+const DEFAULT_TIME_JUMP = 10; // seconds
+
 export interface PlayerProps {
   onPositionChange?: (_position: number) => void;
   onPlay?: () => void;
@@ -90,7 +92,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
 
     const handlePositionChange = useCallback((value: number) => {
       console.debug("Setting position to:", value);
-      setCurrentTime(value);
+      setCurrentTime(value); // Convert to milliseconds
       if (audioElRef.current) {
         audioElRef.current.currentTime = round(value);
       }
@@ -102,7 +104,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     const handleJump = useCallback((delta: number) => {
       if (!isPlayerReady) return;
 
-      const newTime = Math.min(Math.max(0, currentTime + delta * 1000), duration!);
+      const newTime = Math.min(Math.max(0, currentTime + delta * 100), duration!);
       handlePositionChange(newTime);
     }, [currentTime, duration, handlePositionChange, isPlayerReady]);
 
@@ -116,7 +118,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     const handleTimeUpdate = useCallback(() => {
       console.debug("Time update:", audioElRef.current?.currentTime);
       const newTime = audioElRef.current!.currentTime;
-      setCurrentTime(newTime);
+      setCurrentTime(newTime * 1000); // Convert to milliseconds
       onPositionChange?.(newTime);
     }, [onPositionChange]);
 
@@ -208,18 +210,21 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
 
         <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400 mt-4 space-x-4">
           <span>{isPlayerReady ? audioUtils.formatMilliseconds(currentTime) : "-:-:-"}</span>
-          <div className="flex items-center space-x-2">
-            <Button size="sm" onClick={() => handleJump(-10)}>
+          <span>{isPlayerReady ? audioUtils.formatMilliseconds(duration!) : "-:-:-"}</span>
+        </div>
+        <div className="flex mt-4 space-x-2">
+          <div className="flex flex-2 items-center space-x-2">
+            <Button size="sm" onClick={() => handleJump(-DEFAULT_TIME_JUMP)}>
               <Undo2 className="h-4 w-4" />
             </Button>
             <Button size="sm" onClick={togglePlay}>
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
-            <Button size="sm" onClick={() => handleJump(10)}>
+            <Button size="sm" onClick={() => handleJump(DEFAULT_TIME_JUMP)}>
               <Redo2 className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center align-left space-x-2">
             <Slider
               value={[volume]}
               onValueChange={(e) => handleVolumeChange(e[0])}
@@ -229,7 +234,6 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
               min={0}
             />
           </div>
-          <span>{isPlayerReady ? audioUtils.formatMilliseconds(duration!) : "-:-:-"}</span>
         </div>
       </div>
     );
