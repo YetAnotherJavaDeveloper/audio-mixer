@@ -6,12 +6,6 @@ Application to learn Rust
 
 This project uses WebAssembly and it must be pre-built before running the application.
 
-```bash
-cargo install wasm-pack
-cd wasm-api
-wasm-pack build --target web
-```
-
 ## Development
 
 ### WebAssembly API
@@ -23,7 +17,6 @@ Stack used: Rust, WebAssembly
 cd wasm-api
 cargo install wasm-pack
 ```
-
 
 ### Web UI
 

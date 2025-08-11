@@ -40,10 +40,6 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
 
     const [level, setLevel] = useState(0); // Simulated audio level for DeformCanvas
 
-    useEffect(() => {
-      console.debug("Duration updated:", duration);
-    }, [duration]);
-
     const isPlayerReady = useMemo(() => {
       return audioElRef.current !== null && urlQueue.length > 0 && duration !== undefined;
     }, [duration, urlQueue.length]);
@@ -55,7 +51,12 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
         console.error("Invalid audio duration:", metadata.duration);
         return;
       }
-      setDuration(round(metadata.duration));
+      const d = round(metadata.duration * 1000); // Convert to milliseconds
+      console.log("Audio duration in seconds:", d);
+      setDuration(d);
+
+      console.debug(DateTime.fromMillis(metadata.duration * 1000).toFormat("HH:mm:ss"));
+
       const arrayBuffer = await file.arrayBuffer();
       setCurrentBuffer(new Uint8Array(arrayBuffer));
       const blob = new Blob([file], { type: "audio/mpeg" });
@@ -98,10 +99,10 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       [onPositionChange]
     );
 
-    const handleJump = useCallback((ms: number) => {
+    const handleJump = useCallback((delta: number) => {
       if (!isPlayerReady) return;
 
-      const newTime = Math.min(Math.max(0, currentTime + ms), duration!);
+      const newTime = Math.min(Math.max(0, currentTime + delta * 1000), duration!);
       handlePositionChange(newTime);
     }, [currentTime, duration, handlePositionChange, isPlayerReady]);
 
@@ -146,7 +147,6 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
 
         audioElRef.current = audio;
       }
-
 
       audioElRef.current.src = urlQueue[0];
       audioElRef.current.load();
@@ -197,7 +197,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
           <Slider
             ref={playerRef}
             value={[currentTime]}
-            step={0.1}
+            step={100}
             max={duration}
             min={0}
             className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full"
@@ -207,7 +207,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
         </div>
 
         <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400 mt-4 space-x-4">
-          <span>{isPlayerReady ? DateTime.fromMillis(currentTime * 1000).toFormat("HH:mm:ss") : "-:-:-"}</span>
+          <span>{isPlayerReady ? audioUtils.formatMilliseconds(currentTime) : "-:-:-"}</span>
           <div className="flex items-center space-x-2">
             <Button size="sm" onClick={() => handleJump(-10)}>
               <Undo2 className="h-4 w-4" />
@@ -229,7 +229,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
               min={0}
             />
           </div>
-          <span>{isPlayerReady ? DateTime.fromMillis(duration! * 1000).toFormat("HH:mm:ss") : "-:-:-"}</span>
+          <span>{isPlayerReady ? audioUtils.formatMilliseconds(duration!) : "-:-:-"}</span>
         </div>
       </div>
     );
