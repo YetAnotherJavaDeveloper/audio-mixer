@@ -6,7 +6,7 @@ use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::default::{get_codecs, get_probe};
-use super::core::{MusicSample, SampleRate, Sample, MultiChannelSample};
+use super::core::{MusicSample, Rate, Sample, MultiChannelSample};
 
 pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Box<dyn std::error::Error>> {
 
@@ -47,7 +47,7 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Bo
         }
     }
 
-    Ok(MusicSample::new(channels_data, SampleRate::new(sample_rate)))
+    Ok(MusicSample::new(channels_data, Rate::new(sample_rate)))
 }
 
 pub fn save_music_samples(music_samples: &MusicSample, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {

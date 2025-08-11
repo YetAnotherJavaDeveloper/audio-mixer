@@ -2,7 +2,7 @@ mod file;
 mod core;
 mod media;
 
-use crate::core::{extract_sample_info, split_music_samples, transform_abstract, MusicSample};
+use crate::core::{extract_sample_info, split_music_samples, transform_abstract, MusicSample, MusicTime};
 use crate::file::{read_music_samples_from_file, save_music_samples};
 use crate::media::{MediaFilePlayer, MusicSamplesPlayer};
 
@@ -13,7 +13,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     extract_sample_info(&music_sample);
 
     let processed: MusicSample = transform_abstract(&music_sample);
-    let processed = split_music_samples(&processed, 200_000).1;
+
+    let split_time = MusicTime::from_time_ms(7_000, music_sample.sample_rate());
+
+    let processed = split_music_samples(&processed, split_time).1;
 
     extract_sample_info(&processed);
 

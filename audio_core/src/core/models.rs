@@ -93,28 +93,37 @@ impl MultiChannelSample {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SampleRate {
+pub struct Rate {
     value: u32,
 }
 
-impl SampleRate {
-    pub fn new(value: u32) -> SampleRate {
-        SampleRate { value }
+impl Rate {
+    pub fn new(value: u32) -> Rate {
+        Rate { value }
     }
 
     pub fn value(&self) -> u32 {
         self.value
+    }
+
+    pub fn convert_pos_to_time_ms(&self, pos: usize) -> usize {
+        ((pos * 1000) as f32 / self.value as f32).floor() as usize
+    }
+
+    pub fn convert_time_ms_to_pos(&self, time_ms: usize) -> usize {
+        (time_ms as f32 * self.value as f32 / 1000.0).floor() as usize
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MusicSample {
     multi_channel_sample: MultiChannelSample,
-    sample_rate: SampleRate,
+    sample_rate: Rate,
 }
 
 impl MusicSample {
-    pub fn new(multi_channel_sample: MultiChannelSample, sample_rate: SampleRate) -> MusicSample {
+
+    pub fn new(multi_channel_sample: MultiChannelSample, sample_rate: Rate) -> MusicSample {
         MusicSample {
             multi_channel_sample,
             sample_rate,
@@ -132,7 +141,7 @@ impl MusicSample {
         &self.multi_channel_sample
     }
 
-    pub fn sample_rate(&self) -> &SampleRate {
+    pub fn sample_rate(&self) -> &Rate {
         &self.sample_rate
     }
 
@@ -143,6 +152,39 @@ impl MusicSample {
     pub fn first_channel_sample(&self) -> &Sample {
         self.multi_channel_sample.first_channel()
     }
+}
+
+pub struct MusicTime {
+    pos: usize,
+    rate: Rate,
+}
+
+impl MusicTime {
+
+    pub fn from_pos(pos: usize, rate: &Rate) -> MusicTime {
+        MusicTime { pos, rate: rate.clone() }
+    }
+
+    pub fn from_time_ms(time: usize, rate: &Rate) -> MusicTime {
+        MusicTime {
+            pos : rate.convert_time_ms_to_pos(time),
+            rate: rate.clone(),
+        }
+    }
+
+    pub fn pos(&self) -> usize {
+        self.pos
+    }
+
+    pub fn rate(&self) -> &Rate {
+        &self.rate
+    }
+
+    pub fn time_ms(&self) -> usize {
+        self.rate.convert_pos_to_time_ms(self.pos)
+    }
+
+
 }
 
 pub enum Transformation {
