@@ -52,12 +52,7 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Bo
 
 pub fn save_music_samples(music_samples: &MusicSample, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
-    let mut interleaved = Vec::with_capacity(music_samples.first_channel_sample().len() * music_samples.multi_channel_sample().channels());
-    for i in 0..music_samples.first_channel_sample().len() {
-        for ch in 0..music_samples.multi_channel_sample().channels() {
-            interleaved.push(music_samples.multi_channel_sample().sample(ch).value(i));
-        }
-    }
+    let interleaved = music_samples.multi_channel_sample().to_interleaved();
 
     let spec = hound::WavSpec {
         channels: music_samples.multi_channel_sample().channels() as u16,

@@ -63,9 +63,13 @@ impl MultiChannelSample {
             samples: vec![Sample::empty(); capacity],
         }
     }
-    
+
     pub fn mono(sample: Sample) -> MultiChannelSample {
         MultiChannelSample { samples: vec![sample] }
+    }
+
+    pub fn stereo(sample1: Sample, sample2: Sample) -> MultiChannelSample {
+        MultiChannelSample { samples: vec![sample1, sample2] }
     }
 
     pub fn channels(&self) -> usize {
@@ -94,6 +98,16 @@ impl MultiChannelSample {
 
     pub fn push(&mut self, sample: Sample) {
         self.samples.push(sample);
+    }
+
+    pub fn to_interleaved(&self) -> Vec<f32> {
+        let mut interleaved = Vec::with_capacity(self.samples[0].len() * self.channels());
+        for i in 0..self.samples[0].len() {
+            for ch in 0..self.channels() {
+                interleaved.push(self.sample(ch).value(i));
+            }
+        }
+        interleaved
     }
 }
 
@@ -132,6 +146,13 @@ impl MusicSample {
         MusicSample {
             multi_channel_sample,
             sample_rate,
+        }
+    }
+
+    pub fn from_raw_values(sample1: Vec<f32>, sample2: Vec<f32>, rate: u32) -> MusicSample {
+        MusicSample {
+            multi_channel_sample: MultiChannelSample::stereo(Sample::new(sample1), Sample::new(sample2)),
+            sample_rate : Rate::new(rate),
         }
     }
 
