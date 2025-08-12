@@ -23,9 +23,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let fft_definition = FftDefinition::for_frequency_precision(100);
 
-    let frequencies = fft_to_frequencies(&sin_wave, music_sample.sample_rate(), &fft_definition);
+    let frequencies = fft_to_frequencies(&processed.first_channel_sample(), music_sample.sample_rate(), &fft_definition);
 
-    print_fft_result(&frequencies, &fft_definition);
+    print_fft_result(&frequencies);
 
     print_music_sample_info(&processed);
 

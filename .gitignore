@@ -29,5 +29,7 @@ target
 # Ignore lock files
 Cargo.lock
 
+.DS_Store
+
 
 *.wav

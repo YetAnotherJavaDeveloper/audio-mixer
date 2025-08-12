@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::core::FftResult;
-use super::models::{FftDefinition, MusicSample, Sample};
+use super::models::{MusicSample, Sample};
 
 pub fn print_sample_info(sample: &Sample) {
     println!("Sample length: {}", sample.len());
@@ -27,7 +27,7 @@ pub fn print_music_sample_info(music_sample: &MusicSample) {
     println!();
 }
 
-pub fn print_fft_result(fft_result: &Vec<FftResult>, fft_definition: &FftDefinition) {
+pub fn print_fft_result(fft_result: &Vec<FftResult>) {
     println!("FFT Result :");
     println!("Base Frequency -> Frequency -> Magnitude");
     for result in fft_result {

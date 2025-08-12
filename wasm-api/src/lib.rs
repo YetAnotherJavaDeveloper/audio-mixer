@@ -7,7 +7,7 @@ use serde_wasm_bindgen::to_value;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use audio_core::core::{MultiChannelSample, MusicSample, Sample, SampleRate};
+use audio_core::core::{MultiChannelSample, MusicSample, Sample, Rate};
 
 #[derive(Serialize)]
 pub struct Response {
@@ -80,7 +80,7 @@ pub fn handle_music_sample(dto: MusicSampleDto) -> JsValue {
     // Create a MusicSample from the Float32Array
     let sample_chan_0 = Sample::new(chan_0.to_vec());
     let sample_chan_1 = Sample::new(chan_1.to_vec());
-    let sample_rate = SampleRate::new(rate);
+    let sample_rate = Rate::new(rate);
     let multi_channel_sample = MultiChannelSample::new(vec![sample_chan_0, sample_chan_1]);
     let music_sample = MusicSample::new(multi_channel_sample, sample_rate);
 
