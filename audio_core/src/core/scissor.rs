@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::core::{MultiChannelSample, MusicSample, MusicTime};
 
 pub fn split_music_samples(music_sample: &MusicSample, music_time: MusicTime) -> (MusicSample, MusicSample) {
@@ -9,7 +11,7 @@ pub fn split_music_samples(music_sample: &MusicSample, music_time: MusicTime) ->
 
 pub fn split_samples(multi_channel_sample: &MultiChannelSample, music_time: MusicTime) -> (MultiChannelSample, MultiChannelSample) {
 
-    if(multi_channel_sample.channels() == 0 || multi_channel_sample.first_channel().len() < music_time.pos()) {
+    if multi_channel_sample.channels() == 0 || multi_channel_sample.first_channel().len() < music_time.pos() {
         panic!("Can not split")
     }
 

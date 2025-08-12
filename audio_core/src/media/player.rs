@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::fs::File;
 use rodio::{ChannelCount, Decoder, OutputStream, Sample, Sink};
 use rodio::buffer::SamplesBuffer;
@@ -31,6 +32,8 @@ impl MediaFilePlayer {
 pub struct MusicSamplesPlayer {
     music_sample: MusicSample,
     pub sink: Sink,
+
+    #[allow(dead_code)]
     output_stream: OutputStream,
     first_play: bool,
     pub current_position: usize,
@@ -51,7 +54,7 @@ impl MusicSamplesPlayer {
 
     pub fn play(&mut self) {
 
-        if(self.first_play) {
+        if self.first_play {
 
             let mut buffer_data : Vec<Sample> = Vec::new();
 

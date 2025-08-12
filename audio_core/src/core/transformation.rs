@@ -1,5 +1,7 @@
-use crate::core::models::{Sample, Transformation};
-use crate::core::{MultiChannelSample, MusicSample};
+#![allow(dead_code)]
+
+use super::models::{Sample, Transformation};
+use super::models::{MultiChannelSample, MusicSample};
 
 pub fn transform_abstract(sample: &MusicSample) -> MusicSample {
     sample.copy(transform_generic(sample.multi_channel_sample(), Transformation::Reverse))

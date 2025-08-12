@@ -1,29 +1,50 @@
-use rustfft::{Fft, FftPlanner};
-use rustfft::num_complex::{Complex, ComplexFloat};
-use super::models::{Sample, Rate};
+#![allow(dead_code)]
 
-pub fn fft_to_frequency(sample: &Sample, rate: &Rate) -> f32 {
+use rustfft::{FftPlanner};
+use rustfft::num_complex::{Complex32, ComplexFloat};
+use crate::core::FftResult;
+use super::models::{Sample, Rate, FftDefinition};
 
+pub fn fft_to_frequencies(sample: &Sample, rate: &Rate, fft_definition: &FftDefinition) -> Vec<FftResult> {
     let fft = FftPlanner::new().plan_fft(sample.len(), rustfft::FftDirection::Forward);
 
-    let mut complex_output: Vec<Complex<f32>> = sample.values()
+    let mut complex_output: Vec<Complex32> = sample.values()
         .iter()
-        .map(|&x| Complex::new(x, 0.0))
+        .map(|&x| Complex32::new(x, 0.0))
         .collect();
     fft.process(&mut complex_output);
 
     let length = sample.len();
 
-    let mut max_idx = 0;
-    let mut magnitude = f32::MIN;
-    for i in 0..length / 2 {
-        let val = complex_output[i].abs();
-        if val > magnitude {
-            magnitude = val;
-            max_idx = i;
+    let min_index = fft_definition.start_frequency() as f32 * length as f32 / rate.value() as f32;
+    let max_index = fft_definition.end_frequency() as f32 * length as f32 / rate.value() as f32;
+
+
+    let mut result: Vec<FftResult> = Vec::new();
+
+    let mut base_frequency = fft_definition.start_frequency() as f32;
+    let mut next_frequency = base_frequency + fft_definition.frequency_precision() as f32;
+
+    let mut max_magnitude = f32::MIN;
+    let mut max_magnitude_frequency = 0.0;
+
+    for i in min_index as usize..max_index as usize {
+
+        let magnitude = complex_output[i].abs();
+        let frequency = i as f32 * rate.value() as f32 / length as f32;
+
+        if frequency > next_frequency || i == max_index as usize {
+            result.push(FftResult::new(base_frequency, max_magnitude_frequency, max_magnitude));
+            max_magnitude = f32::MIN;
+            base_frequency += fft_definition.frequency_precision() as f32;
+            next_frequency += fft_definition.frequency_precision() as f32;
         }
+        if magnitude > max_magnitude {
+            max_magnitude = magnitude;
+            max_magnitude_frequency = frequency;
+        }
+
     }
 
-    let frequency = max_idx as f32 * rate.value() as f32 / length as f32;
-    frequency
+    result
 }

@@ -1,12 +1,13 @@
+#![allow(dead_code)]
+
 use std::fs::File;
-use rodio::{Decoder, Sink};
 use symphonia::core::audio::{AudioBufferRef, Signal};
 use symphonia::core::codecs::DecoderOptions;
 use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::default::{get_codecs, get_probe};
-use super::core::{MusicSample, Rate, Sample, MultiChannelSample};
+use super::core::{MusicSample, Rate, MultiChannelSample};
 
 pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Box<dyn std::error::Error>> {
 
@@ -27,7 +28,6 @@ pub fn read_music_samples_from_file(file_path: String) -> Result<MusicSample, Bo
 
     let mut channels_data: MultiChannelSample = MultiChannelSample::with_capacity(track.codec_params.channels.unwrap().count());
     let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
-    let channels = track.codec_params.channels.unwrap().count();
 
     while let Ok(packet) = format.next_packet() {
         let decoded = decoder.decode(&packet)?;

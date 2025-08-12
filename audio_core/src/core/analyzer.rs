@@ -1,4 +1,7 @@
-use crate::core::{MusicSample, Sample};
+#![allow(dead_code)]
+
+use crate::core::FftResult;
+use super::models::{FftDefinition, MusicSample, Sample};
 
 pub fn print_sample_info(sample: &Sample) {
     println!("Sample length: {}", sample.len());
@@ -24,19 +27,25 @@ pub fn print_music_sample_info(music_sample: &MusicSample) {
     println!();
 }
 
+pub fn print_fft_result(fft_result: &Vec<FftResult>, fft_definition: &FftDefinition) {
+    println!("FFT Result :");
+    println!("Base Frequency -> Frequency -> Magnitude");
+    for result in fft_result {
+        println!("{} : {} : {}", result.frequency_window(), result.frequency(), result.magnitude());
+        
+    }
+}
+
 fn find_minmax_music_sample(sample: &MusicSample) -> (f32, f32) {
     let mut min = 0.0;
     let mut max = 0.0;
 
-    let mut sample_min = 0.0;
-    let mut sample_max = 0.0;
-
     for sample in sample.multi_channel_sample().samples() {
-        (sample_min, sample_max) = find_minmax_sample(sample);
+        let (sample_min, sample_max) = find_minmax_sample(sample);
         if sample_min < min {
             min = sample_min;
         }
-        if(sample_max > max) {
+        if sample_max > max {
             max = sample_max;
         }
     }

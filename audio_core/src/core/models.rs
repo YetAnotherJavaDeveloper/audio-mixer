@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -187,8 +188,63 @@ impl MusicTime {
     pub fn time_ms(&self) -> usize {
         self.rate.convert_pos_to_time_ms(self.pos)
     }
+}
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FftDefinition {
+    start_frequency: u32,
+    end_frequency: u32,
+    frequency_precision: u32,
+}
 
+impl FftDefinition {
+    pub fn for_frequency_precision(frequency_precision: u32) -> FftDefinition {
+        FftDefinition {
+            start_frequency: 0,
+            end_frequency: 20_000,
+            frequency_precision,
+        }
+    }
+
+    pub fn start_frequency(&self) -> u32 {
+        self.start_frequency
+    }
+
+    pub fn end_frequency(&self) -> u32 {
+        self.end_frequency
+    }
+
+    pub fn frequency_precision(&self) -> u32 {
+        self.frequency_precision
+    }
+}
+
+pub struct FftResult {
+    frequency_window: f32,
+    frequency: f32,
+    magnitude: f32,
+}
+
+impl FftResult {
+    pub fn new(frequency_window: f32, frequency: f32, magnitude: f32) -> FftResult {
+        FftResult {
+            frequency_window,
+            frequency,
+            magnitude,
+        }
+    }
+
+    pub fn magnitude(&self) -> f32 {
+        self.magnitude
+    }
+
+    pub fn frequency(&self) -> f32 {
+        self.frequency
+    }
+
+    pub fn frequency_window(&self) -> f32 {
+        self.frequency_window
+    }
 }
 
 pub enum Transformation {

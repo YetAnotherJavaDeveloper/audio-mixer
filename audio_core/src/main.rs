@@ -2,10 +2,10 @@ mod file;
 mod core;
 mod media;
 
-use audio_core::core::{fft_to_frequency, generate_sine_wave};
-use audio_core::core::{print_music_sample_info, split_music_samples, transform_abstract, MultiChannelSample, MusicSample, MusicTime};
-use audio_core::file::{read_music_samples_from_file, save_music_samples};
-use audio_core::media::{MediaFilePlayer, MusicSamplesPlayer};
+use audio_core::core::{generate_sine_wave, fft_to_frequencies, FftDefinition, print_fft_result};
+use audio_core::core::{print_music_sample_info, split_music_samples, transform_abstract, MusicSample, MusicTime};
+use audio_core::file::{read_music_samples_from_file};
+use audio_core::media::{MusicSamplesPlayer};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -19,11 +19,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let processed = split_music_samples(&processed, split_time).1;
 
-    let sin_wave = generate_sine_wave(100_000, 880.0, processed.sample_rate());
+    let sin_wave = generate_sine_wave(65_636, 880.0, music_sample.sample_rate());
 
-    println!("Frequency : {}", fft_to_frequency(&sin_wave, processed.sample_rate()));
+    let fft_definition = FftDefinition::for_frequency_precision(100);
 
-    let processed = processed.copy(MultiChannelSample::mono(sin_wave));
+    let frequencies = fft_to_frequencies(&sin_wave, music_sample.sample_rate(), &fft_definition);
+
+    print_fft_result(&frequencies, &fft_definition);
 
     print_music_sample_info(&processed);
 
