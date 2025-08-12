@@ -6,8 +6,11 @@ import { DeformCanvas } from "./DeformCanvas";
 import { DateTime } from "luxon";
 import { isNumber, round } from "radashi";
 import { audioUtils } from "@/lib/audio/audio.utils";
+import { Card, CardContent, CardFooter } from "./ui/card";
+import AudioFileInput, { type FileInputRef } from "./FileInput";
+import { initAndPlayWasmWorklet } from "@/lib/audio/initAndPlayWasmWorklet";
 
-const DEFAULT_TIME_JUMP = 10; // seconds
+const DEFAULT_TIME_JUMP = 5; // seconds
 
 export interface PlayerProps {
   onPositionChange?: (_position: number) => void;
@@ -39,12 +42,22 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     const [volume, setVolume] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [currentSampleInfo, setCurrentSampleInfo] = useState<{ chanSize: number, rate: number } | undefined>(undefined);
+    const [currentFrame, setCurrentFrame] = useState(0);
+
+    const inputRef = useRef<FileInputRef>(null);
+    const audioNodeRef = useRef<AudioWorkletNode | null>(null);
+
+    const audioContext = useMemo(() => {
+      return new AudioContext();
+    }, []);
 
     const [level, setLevel] = useState(0); // Simulated audio level for DeformCanvas
 
     const isPlayerReady = useMemo(() => {
-      return audioElRef.current !== null && urlQueue.length > 0 && duration !== undefined;
-    }, [duration, urlQueue.length]);
+      return duration !== undefined;
+    }, [duration]);
+
 
     const loadAudioFile = useCallback(async (file: File) => {
       const metadata = await audioUtils.extractAudioMetadata(file);
@@ -67,20 +80,28 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     }, []);
 
     const playAudio = useCallback(() => {
-      if (audioElRef.current) {
-        audioElRef.current.play().catch(console.error);
-        setIsPlaying(true);
-        onPlay?.();
-      }
-    }, [onPlay]);
+      // if (audioElRef.current) {
+      //   audioElRef.current.play().catch(console.error);
+      //   setIsPlaying(true);
+      //   onPlay?.();
+      // }
+      // if (audioContext.state === "suspended") {
+      audioContext.resume().catch(console.error);
+      setIsPlaying(true);
+      onPlay?.();
+      // }
+    }, [onPlay, audioContext]);
 
     const pauseAudio = useCallback(() => {
-      if (audioElRef.current) {
-        audioElRef.current.pause();
-        setIsPlaying(false);
-        onPause?.();
-      }
-    }, [onPause]);
+      // if (audioElRef.current) {
+      //   audioElRef.current.pause();
+      //   setIsPlaying(false);
+      //   onPause?.();
+      // }
+      audioContext.suspend().catch(console.error);
+      setIsPlaying(false);
+      onPause?.();
+    }, [audioContext, onPause]);
 
     const togglePlay = () => {
       if (isPlaying) {
@@ -101,12 +122,15 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       [onPositionChange]
     );
 
-    const handleJump = useCallback((delta: number) => {
-      if (!isPlayerReady) return;
+    const seekTo = useCallback((delta: number) => {
+      if (!audioNodeRef.current || !currentSampleInfo) return;
+      const { rate } = currentSampleInfo;
+      const node = audioNodeRef.current;
+      if (!node) return;
+      const targetFrame = currentFrame + round(delta * rate);
 
-      const newTime = Math.min(Math.max(0, currentTime + delta * 100), duration!);
-      handlePositionChange(newTime);
-    }, [currentTime, duration, handlePositionChange, isPlayerReady]);
+      node.port.postMessage({ seek: targetFrame });
+    }, [currentSampleInfo, currentFrame]);
 
     const handleVolumeChange = useCallback((value: number) => {
       if (audioElRef.current) {
@@ -121,6 +145,64 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       setCurrentTime(newTime * 1000); // Convert to milliseconds
       onPositionChange?.(newTime);
     }, [onPositionChange]);
+
+
+    const handleFileChange = useCallback(async (file: File) => {
+      if (inputRef.current) {
+        inputRef.current.reset();
+      }
+
+      if (playerRef.current) {
+        // loadAudioFile(file);
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const view = new DataView(arrayBuffer);
+          const cloneBuffer = new Float32Array(arrayBuffer, view.byteOffset, view.byteLength / Float32Array.BYTES_PER_ELEMENT);
+
+          // setArrayBuffer(new Uint8Array(arrayBuffer));
+          const audioBuff = await audioContext.decodeAudioData(arrayBuffer);
+          console.log('Buffer length:', arrayBuffer.byteLength);
+          console.log('Float32Array length:', cloneBuffer);
+          console.log('Audio buffer duration:', audioBuff.duration);
+          console.log('Audio buffer sample rate:', audioBuff.sampleRate);
+          console.log('Audio buffer number of channels:', audioBuff.numberOfChannels);
+
+          const chan_0 = audioBuff.getChannelData(0);
+          const chan_1 = audioBuff.getChannelData(1);
+
+          const samplesArray = [] as Float32Array[];
+
+          samplesArray.push(new Float32Array(chan_0));
+          samplesArray.push(new Float32Array(chan_1));
+
+          const worklet = await initAndPlayWasmWorklet(
+            audioContext,
+            samplesArray.length,
+            samplesArray,
+            audioBuff.sampleRate
+          );
+
+          setDuration(round(audioBuff.duration * 1000)); // Convert to milliseconds
+          setCurrentSampleInfo({
+            chanSize: audioBuff.length,
+            rate: audioBuff.sampleRate,
+          })
+          audioNodeRef.current = worklet.node;
+
+          audioNodeRef.current.port.onmessage = (event) => {
+            if (event.data.currentFrame !== undefined) {
+              console.debug("Current frame:", event.data.currentFrame);
+              setCurrentFrame(event.data.currentFrame);
+              setCurrentTime((event.data.currentFrame / audioBuff.sampleRate) * 1000); // Convert to milliseconds
+            }
+          };
+
+        } catch (error) {
+          console.error('Error reading file:', error);
+        }
+      }
+    }, [audioContext]);
+
 
     useEffect(() => {
       if (!currentBuffer) return;
@@ -190,41 +272,54 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     }));
 
     return (
-      <div className="w-full max-w-md mx-auto p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div className="flex items-center justify-between mb-4">
-          <DeformCanvas audioLevel={level} />
-        </div>
+      <Card className="w-full h-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-lg">
 
-        <div className="flex flex-col items-center">
-          <Slider
-            ref={playerRef}
-            value={[currentTime]}
-            step={100}
-            max={duration}
-            min={0}
-            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full"
-            style={{ cursor: "pointer" }}
-            onValueChange={(e) => handlePositionChange(e[0])}
+        <CardContent className="flex-grow flex flex-col justify-center relative pt-0">
+          <AudioFileInput
+            className="absolute top-4 right-4 z-10"
+            ref={inputRef}
+            onFileSelected={handleFileChange}
           />
-        </div>
+          <DeformCanvas audioLevel={level} />
+        </CardContent>
 
-        <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400 mt-4 space-x-4">
-          <span>{isPlayerReady ? audioUtils.formatMilliseconds(currentTime) : "-:-:-"}</span>
-          <span>{isPlayerReady ? audioUtils.formatMilliseconds(duration!) : "-:-:-"}</span>
-        </div>
-        <div className="flex mt-4 space-x-2">
-          <div className="flex flex-2 items-center space-x-2">
-            <Button size="sm" onClick={() => handleJump(-DEFAULT_TIME_JUMP)}>
-              <Undo2 className="h-4 w-4" />
-            </Button>
-            <Button size="sm" onClick={togglePlay}>
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <Button size="sm" onClick={() => handleJump(DEFAULT_TIME_JUMP)}>
-              <Redo2 className="h-4 w-4" />
-            </Button>
+        <CardFooter className="flex flex-col w-full space-y-4 pt-4">
+          {/* Timeline + timers */}
+          <div className="w-full">
+            <Slider
+              ref={playerRef}
+              value={[currentTime]}
+              step={100}
+              max={duration}
+              min={0}
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer"
+              onValueChange={(e) => handlePositionChange(e[0])}
+            />
+            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <span>{isPlayerReady ? audioUtils.formatMilliseconds(currentTime) : "-:-:-"}</span>
+              <span>{isPlayerReady ? audioUtils.formatMilliseconds(duration!) : "-:-:-"}</span>
+            </div>
           </div>
-          <div className="flex items-center align-left space-x-2">
+
+          {/* Controls + volume */}
+          <div className="flex w-full items-center justify-between">
+            {/* Empty space */}
+            <div className="w-24" />
+
+            {/* Player controls */}
+            <div className="flex items-center space-x-2">
+              <Button size="sm" onClick={() => seekTo(-DEFAULT_TIME_JUMP)}>
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button size="sm" onClick={togglePlay}>
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button size="sm" onClick={() => seekTo(DEFAULT_TIME_JUMP)}>
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Player volume */}
             <Slider
               value={[volume]}
               onValueChange={(e) => handleVolumeChange(e[0])}
@@ -234,10 +329,10 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
               min={0}
             />
           </div>
-        </div>
-      </div>
+        </CardFooter>
+
+      </Card>
     );
-  }
-);
+  });
 
 export default PlayerComponent;

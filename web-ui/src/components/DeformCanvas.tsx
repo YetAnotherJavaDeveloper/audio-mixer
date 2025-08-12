@@ -55,7 +55,7 @@ function DeformedPlane({ audioLevel }: { audioLevel: number }) {
 
     return (
         <mesh>
-            <planeGeometry args={[5, 5, 32, 32]} />
+            <sphereGeometry args={[3, 32, 32]} />
             <deformMaterialImpl ref={matRef} />
         </mesh>
     );

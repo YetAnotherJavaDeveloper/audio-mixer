@@ -6,7 +6,6 @@ pub struct Sample {
 }
 
 impl Sample {
-
     pub fn empty() -> Sample {
         Sample { values: Vec::new() }
     }
@@ -49,15 +48,19 @@ pub struct MultiChannelSample {
 
 impl MultiChannelSample {
     pub fn empty() -> MultiChannelSample {
-        MultiChannelSample { samples: Vec::new() }
+        MultiChannelSample {
+            samples: Vec::new(),
+        }
     }
 
     pub fn new(samples: Vec<Sample>) -> MultiChannelSample {
         MultiChannelSample { samples }
     }
-    
+
     pub fn with_capacity(capacity: usize) -> MultiChannelSample {
-        MultiChannelSample { samples: vec![Sample::empty(); capacity] }
+        MultiChannelSample {
+            samples: vec![Sample::empty(); capacity],
+        }
     }
 
     pub fn channels(&self) -> usize {
@@ -111,7 +114,6 @@ pub struct MusicSample {
 }
 
 impl MusicSample {
-
     pub fn new(multi_channel_sample: MultiChannelSample, sample_rate: SampleRate) -> MusicSample {
         MusicSample {
             multi_channel_sample,
