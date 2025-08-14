@@ -16,3 +16,5 @@ js-sys = "0.3.77"
 imp = "0.1.0"
 getrandom = { version = "0.2", features = ["js"] }
 tsify = "0.5.5"
+web-sys = "0.3.77"
+bincode = "2.0.1"

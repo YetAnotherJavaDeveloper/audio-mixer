@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod engine;
 
 // extern crate wasm_bindgen;
 use js_sys::{ArrayBuffer, Float32Array, JsString};
@@ -7,7 +8,7 @@ use serde_wasm_bindgen::to_value;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use audio_core::core::{MultiChannelSample, MusicSample, Sample, Rate};
+use audio_core::core::{MultiChannelSample, MusicSample, Rate, Sample};
 
 #[derive(Serialize)]
 pub struct Response {

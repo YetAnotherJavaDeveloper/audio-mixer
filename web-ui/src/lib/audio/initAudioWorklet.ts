@@ -12,7 +12,7 @@ export const initAndPlayWorklet = async (
 
   const wasm = await init(); // init wasm_bindgen
   const len = chan[0].length; // frames
-  const buffers = new AudioBuffers(len, nbChan);
+  const buffers = new AudioBuffers(len, nbChan, rate);
 
   // views on wasm memory (byte offset must be number of floats)
   const inputBuf = new Float32Array(wasm.memory.buffer, buffers.input_ptr(), len * nbChan);

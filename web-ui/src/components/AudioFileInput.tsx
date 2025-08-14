@@ -1,5 +1,4 @@
 import React, { useCallback, useImperativeHandle, useRef } from 'react'
-import { Label } from './ui/label';
 import { FileUp } from 'lucide-react';
 import { buttonVariants } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -24,33 +23,42 @@ const AudioFileInput = React.forwardRef<FileInputRef, FileInputProps>(
       reset: () => {
         if (inputRef.current) {
           inputRef.current.value = '';
+          setCurrentFilename(undefined);
         }
       }
     }));
 
-    const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      const filename = file?.name || 'unknown file';
-      if (!file || !filename) return;
-      setCurrentFilename(filename);
-
+      if (!file) return;
+      setCurrentFilename(file.name);
       onFileSelected(file);
     }, [onFileSelected]);
+
+    const handleClick = useCallback(() => {
+      inputRef.current?.click();
+    }, []);
 
     const classname = cn(
       buttonVariants({ variant: 'outline', size: 'sm' }),
       className,
-      "cursor-pointer",
-      "flex items-center",
+      "cursor-pointer flex items-center"
     );
 
     return (
-      <div className={classname}>
-        <Label htmlFor="file-upload">
-          <FileUp />
-        </Label>
-        <input ref={inputRef} className="sr-only" id="file-upload" type="file" accept="audio/*" onChange={handleFileChange} />
-      </div>
+      <>
+        <div className={classname} onClick={handleClick}>
+          <FileUp className="mr-2" />
+          {_currentFilename ?? "Choose file"}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </>
     )
   }
 );

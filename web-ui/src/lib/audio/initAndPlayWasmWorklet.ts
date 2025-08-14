@@ -9,13 +9,14 @@ export async function initAndPlayWasmWorklet(
   await audioContext.audioWorklet.addModule('/worklet/wasm-output-processor.js');
 
   const wasm = await init();
+
   const chanSize = chan[0].length;
   const bufferSize = chanSize * chanCount; // interleaved size
 
   // Instantiate AudioBuffers with the length and number of channels
   // This will allocate memory in the WASM module
   // and return an instance that we can use to interact with the audio data
-  const buffers = new AudioBuffers(chanSize, chanCount);
+  const buffers = new AudioBuffers(chanSize, chanCount, rate);
 
   // This view allow us to write to the input buffer in WASM memory
   // The input buffer is interleaved, meaning that each channel's samples are stored one
@@ -28,7 +29,11 @@ export async function initAndPlayWasmWorklet(
   }
 
   // Call the WASM processing function with desired transformation
-  buffers.process(AudioTrans.DoubleSpeed);
+  buffers.process(AudioTrans.NoTransfo);
+
+  buffers.init_ftt(1000, 128); // Initialize FFT with rate and size
+
+  buffers.compute_fft(); // Compute FFT on the input data
 
   const node = new AudioWorkletNode(audioContext, 'wasm-output-processor', {
     processorOptions: {
@@ -44,5 +49,5 @@ export async function initAndPlayWasmWorklet(
 
   console.info('WASM worklet initialized and connected to audio context');
 
-  return { node };
+  return { node, buffers, wasm };
 }

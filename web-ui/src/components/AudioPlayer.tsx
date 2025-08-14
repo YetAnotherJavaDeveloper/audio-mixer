@@ -4,11 +4,15 @@ import { Play, Pause, Undo2, Redo2 } from "lucide-react";
 import { Slider } from "./ui/slider";
 import { DeformCanvas } from "./DeformCanvas";
 import { DateTime } from "luxon";
-import { isNumber, round } from "radashi";
+import { isNumber, min, round } from "radashi";
 import { audioUtils } from "@/lib/audio/audio.utils";
 import { Card, CardContent, CardFooter } from "./ui/card";
-import AudioFileInput, { type FileInputRef } from "./FileInput";
-import { initAndPlayWasmWorklet } from "@/lib/audio/initAndPlayWasmWorklet";
+import AudioFileInput, { type FileInputRef } from "./AudioFileInput";
+import { initAndPlayWasmWorklet } from "@/lib/audio/initAndPlayWasmWorklet"
+import { type InitOutput, AudioBuffers } from "wasm-api";
+import BarChartComponent, { type BarChartRef, type FftDataType } from "./charts/BarChart";
+import type { ChartConfig } from "./ui/chart";
+
 
 const DEFAULT_TIME_JUMP = 5; // seconds
 
@@ -35,15 +39,24 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
     const playerRef = useRef<HTMLDivElement>(null);
     const audioElRef = useRef<HTMLAudioElement | null>(null);
 
+    const engineRef = useRef<AudioBuffers>(null);
+    const wasmRef = useRef<InitOutput>(null);
+    const chartRef = useRef<BarChartRef>(null);
+
+
     const [urlQueue, setUrlQueue] = useState<string[]>([]);
 
-    const [currentBuffer, setCurrentBuffer] = useState<Uint8Array | null>(null);
+    const [currentBuffer, setCurrentBuffer] = useState<Float32Array | null>(null);
     const [duration, setDuration] = useState<number | undefined>(undefined);
     const [volume, setVolume] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentSampleInfo, setCurrentSampleInfo] = useState<{ chanSize: number, rate: number } | undefined>(undefined);
     const [currentFrame, setCurrentFrame] = useState(0);
+
+    const [currentMagnitudes, setCurrentMagnitudes] = useState<number[]>(new Array(2001).fill(0));
+    const [fftData, setFftData] = useState<FftDataType[]>([]);
+    const [inputData, setInputData] = useState<{ time: number; value: number }[]>([]);
 
     const inputRef = useRef<FileInputRef>(null);
     const audioNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -73,7 +86,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       console.debug(DateTime.fromMillis(metadata.duration * 1000).toFormat("HH:mm:ss"));
 
       const arrayBuffer = await file.arrayBuffer();
-      setCurrentBuffer(new Uint8Array(arrayBuffer));
+      // setCurrentBuffer(new Uint8Array(arrayBuffer));
       const blob = new Blob([file], { type: "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       setUrlQueue([url]);
@@ -126,6 +139,7 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       if (!audioNodeRef.current || !currentSampleInfo) return;
       const { rate } = currentSampleInfo;
       const node = audioNodeRef.current;
+
       if (!node) return;
       const targetFrame = currentFrame + round(delta * rate);
 
@@ -182,6 +196,9 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
             audioBuff.sampleRate
           );
 
+          wasmRef.current = worklet.wasm;
+          engineRef.current = worklet.buffers;
+
           setDuration(round(audioBuff.duration * 1000)); // Convert to milliseconds
           setCurrentSampleInfo({
             chanSize: audioBuff.length,
@@ -191,7 +208,6 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
 
           audioNodeRef.current.port.onmessage = (event) => {
             if (event.data.currentFrame !== undefined) {
-              console.debug("Current frame:", event.data.currentFrame);
               setCurrentFrame(event.data.currentFrame);
               setCurrentTime((event.data.currentFrame / audioBuff.sampleRate) * 1000); // Convert to milliseconds
             }
@@ -271,6 +287,83 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
       }),
     }));
 
+    useEffect(() => {
+      if (!engineRef.current || !wasmRef.current) return;
+      // store once the input buffer from shared memory
+      if (currentBuffer) return; // already set
+      const inputBuffer = new Float32Array(wasmRef.current.memory.buffer, engineRef.current.input_ptr(), engineRef.current.len() * engineRef.current.channels());
+      setCurrentBuffer(inputBuffer);
+      const rate = engineRef.current.engine_state.track_config.sample_rate;
+      const duration = engineRef.current.len() / rate;
+      const dataForChart = [] as { time: number; value: number }[];
+      inputBuffer.forEach((value, index) => {
+        dataForChart.push({
+          time: index / rate,
+          value: value,
+        });
+      });
+
+      console.log("dataForChart length:", dataForChart.length, "duration:", duration, "rate:", rate);
+      setInputData(dataForChart);
+      if (chartRef.current) {
+        chartRef.current.setData(
+          dataForChart.slice(0, 100)
+            .map((d) => ({
+              freq: d.time,
+              magn: Math.min(1, Math.max(0, d.value)) // Scale to 0-1 range
+            }))
+        );
+      }
+    }, [currentBuffer, isPlaying]);
+
+    useEffect(() => {
+      if (!engineRef.current || !wasmRef.current) return;
+
+      if (!engineRef.current.engine_state.is_playing) return;
+
+      // if (currentFrame % 10 !== 0) return;
+
+      engineRef.current.set_current_frame(currentFrame);
+      engineRef.current.compute_fft();
+      if (!engineRef.current) return;
+      if (!engineRef.current.engine_state.fft_initialized) return;
+
+      // read the FFT data
+      const fftDataBuffer = wasmRef.current?.memory.buffer.slice(
+        engineRef.current.fft_ptr,
+        engineRef.current.fft_ptr + engineRef.current.fft_size * Float32Array.BYTES_PER_ELEMENT
+      );
+      if (fftDataBuffer) {
+        const fftArray = new Float32Array(fftDataBuffer);
+        // get odd values (magn part)
+        const magnitudes = [];
+        const fftData: FftDataType[] = [];
+        fftArray.forEach((value, index) => {
+          if (index % 2 === 1) {
+            if (index > 0 && fftArray[index - 1] === 0) {
+              return;
+            }
+            const bandValue = Math.min(1, Math.max(0, value / 100));
+            const freq = fftArray[index - 1]; // Frequency value
+            fftData.push({ freq: freq, magn: value });
+          }
+        });
+        for (let i = 1; i < 65; i += 2) {
+          // scale the magnitude to a range of 0-1
+          const bandValue = Math.min(1, Math.max(0, fftArray[i] / 100));
+          magnitudes.push(bandValue);
+        }
+        if (chartRef.current) {
+          chartRef.current.setData(fftData);
+        }
+        setFftData(fftData);
+        setCurrentMagnitudes(magnitudes);
+      } else {
+        console.warn("No FFT data available");
+      }
+
+    }, [currentFrame])
+
     return (
       <Card className="w-full h-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-lg">
 
@@ -280,7 +373,20 @@ const PlayerComponent = React.forwardRef<PlayerRef, PlayerProps>(
             ref={inputRef}
             onFileSelected={handleFileChange}
           />
-          <DeformCanvas audioLevel={level} />
+          <div className="flex items-center justify-between mb-4">
+            <DeformCanvas audioLevel={level} magnitudes={currentMagnitudes} />
+          </div>
+          <BarChartComponent
+            className="max-h-[500px]"
+            ref={chartRef}
+            data={[]}
+            chartConfig={{
+              magn: {
+                label: "Magnitude",
+                color: "green",
+              }
+            } satisfies ChartConfig
+            } />
         </CardContent>
 
         <CardFooter className="flex flex-col w-full space-y-4 pt-4">

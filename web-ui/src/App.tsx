@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import PlayerComponent, { type PlayerRef } from './components/AudioPlayer';
 import { ThemeProvider } from './components/theme-provider';
+import AudioManager from './pages/AudioManager';
+import { AudioEngineProvider } from "@/lib/audio/engine.context";
 
 const App = () => {
 
@@ -16,7 +18,10 @@ const App = () => {
         </header>
         <main className="flex-grow min-h-0 h-full items-center justify-center bg-gray-100 dark:bg-gray-900">
           <div className="flex flex-col items-center w-full h-full p-4">
-            <PlayerComponent ref={playerRef} />
+            {/* <PlayerComponent ref={playerRef} /> */}
+            <AudioEngineProvider>
+              <AudioManager />
+            </AudioEngineProvider>
           </div>
         </main>
       </div>
